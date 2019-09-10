@@ -75,8 +75,12 @@ class UrBoard:
     def move(self, player, start_box, dice_roll):
         # if dice_roll is zero return true
         if dice_roll == 0:
-            return True
+            return {'done': True, 'replay': False}
         end_box = start_box + dice_roll
+
+        replay = False
+        if end_box in constant.ROSETTA:
+            replay = True
 
         if self.check_valid_move(player, start_box, end_box):
             # Case: end box is tuple (piece gets to the end)
@@ -99,14 +103,12 @@ class UrBoard:
                 self.remove_piece(player, start_box)
                 self.add_piece(player, end_box)
 
-            # Restore first box if it was used
-            if start_box == 0:
-                self.restore_first_box(player)
-
-            return True
+            self.restore_first_box()
+            return {'done': True, 'replay': replay}
 
         else:
-            return False
+            self.restore_first_box()
+            return {'done': False, 'replay': replay}
 
     def remove_piece(self, player, start_box):
         list_order = 0 if player == constant.WHITE else 1
@@ -134,19 +136,23 @@ class UrBoard:
         else:
             self.black_score += 1
 
-    def restore_first_box(self, player):
-        self.add_piece(player, 0)
-        if player == constant.WHITE:
+    def restore_first_box(self):
+        if self.board[0][0] == 0 and self.white_start > 0:
             self.white_start -= 1
-        else:
+            self.add_piece(1, 0)
+
+        if self.board[0][1] == 0 and self.black_start > 0:
             self.black_start -= 1
+            self.add_piece(-1, 0)
 
     def show_valid_moves(self, player, dice_roll):
-        valid_moves = []
+        valid_moves_number = []
+        valid_moves_dictionary = []
         for start_box in range(constant.BOXES - 1):
             if self.check_valid_move(player, start_box, start_box + dice_roll):
-                valid_moves.append(start_box)
-        return valid_moves
+                valid_moves_number.append(start_box)
+
+        return valid_moves_number
 
     def game_ended(self):
         if self.white_score == constant.PIECES or self.black_score == constant.PIECES:
@@ -156,7 +162,7 @@ class UrBoard:
 
     def state(self):
         small_list = []
-        result = [[self.white_score, self.black_score], [self.white_start + 1, self.black_start + 1]]
+        result = [[self.white_score, self.black_score], [self.white_start, self.black_start]]
 
         # add to the result the two START sections
         for list_order in range(2):
