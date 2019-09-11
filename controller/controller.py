@@ -1,7 +1,6 @@
 from model.board import UrBoard
 import constant
 
-
 class Match:
     def __init__(self, agent_white, agent_black):
         self.agent_white = agent_white
