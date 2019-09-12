@@ -218,3 +218,18 @@ class UrBoard:
         for dice in range(constant.NUM_DICES):
             result += random.choice(constant.DICE)
         return result
+
+    def describe_box(self, player, box):
+        if type(self.board[box]) is int:
+            value = player * self.board[box]
+        elif type(self.board[box]) is list:
+            value = player * self.board[box][0 if player == 1 else 1]
+        else:
+            return 'end'
+
+        if value == 0:
+            return 'move'
+        elif value == -1:
+            return 'eat'
+        else:
+            return None

@@ -1,10 +1,12 @@
 import actor.agents as ag
-from controller.controller import Match
+from controller.controller import Match, Tournament
 import constant
 import random
 import numpy as np
 from time import time
+from datetime import datetime
 from copy import deepcopy
+import json
 
 
 def match_between_two_random_agents():
@@ -80,15 +82,15 @@ def tournament_between_ordered_agents():
 
 
 def match_between_two_ordered_agents():
-    order_a = [8, 13, 4, 11, 15, 14, 10, 12, 0, 2, 1, 6, 9, 7, 5, 3]
-    order_b = [8, 11, 2, 9, 13, 12, 6, 10, 15, 0, 14, 4, 7, 5, 3, 1]
+    order_a = [14, 8, 15, 0, 6, 12, 1, 4, 10, 9, 13, 7, 3, 2, 5, 11]
+    order_b = [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5]
 
     reps = 10000
 
-    agent1 = ag.OrderedAgent(constant.WHITE, order_a)
-    agent2 = ag.OrderedAgent(constant.BLACK, order_b)
-    agent3 = ag.OrderedAgent(constant.BLACK, order_a)
-    agent4 = ag.OrderedAgent(constant.WHITE, order_b)
+    agent1 = ag.OrderedAgent(order_a)
+    agent2 = ag.OrderedAgent(order_b)
+    agent3 = ag.OrderedAgent(order_a)
+    agent4 = ag.OrderedAgent(order_b)
     wins_1 = 0
     wins_2 = 0
     t0 = time()
@@ -194,5 +196,59 @@ def simple_genetic_algorithm_for_ordered_agents():
     print('winner', best_order)
 
 
+def match_between_two_policy_agents():
+    traits1 = {'eat': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.2],
+               'move': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.5],
+               'end': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.4]}
+    traits2 = {'eat': [2, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.1],
+               'move': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.6],
+               'end': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 2]}
+    agent1 = ag.PolicyAgent(traits1)
+    agent2 = ag.PolicyAgent(traits2)
+    t = Tournament([agent1, agent2], 10)
+    t.play()
+    print(t.leaderboard)
+
+
+def simple_genetic_algorithm(starting_agent_list):
+    best_agents = starting_agent_list
+    num_of_children = 50
+    generations = 20
+    threshold = 0.95
+    repetitions = 3
+
+    for gen in range(generations):
+        t0 = time()
+        pool = []
+        print('Generation', gen)
+        num_of_children_per_best = round(num_of_children / len(best_agents))
+        for senior_agent in best_agents:
+            children = senior_agent.mutate(num_of_children_per_best)
+            pool.append(senior_agent)
+            pool = pool + children
+        print('Number of agents', len(pool))
+        t = Tournament(pool, repetitions)
+        t.play()
+        best_agents = []
+        for elem in t.leaderboard:
+            if elem[1] >= (threshold * t.leaderboard[0][1]):
+                best_agents.append(elem[0])
+        t1 = time()
+        print('Time', t1 - t0)
+
+    # Writing JSON data
+    now = datetime.now()
+    filename = '{}--{}--{}--{}-{}-{}-geneticresults.json'.format(now.day, now.month, now.year, now.hour, now.minute,
+                                                                 now.second)
+    with open(filename, 'w') as f:
+        json.dump(t.jsonify_leaderboard(), f)
+    f.close()
+
+
 if __name__ == "__main__":
-    match_between_two_ordered_agents()
+    starting_traits = {'eat': [2, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.1],
+                       'move': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 0.6],
+                       'end': [1, [8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5], 2]}
+    starting_agent = ag.PolicyAgent(starting_traits)
+    simple_genetic_algorithm(
+        [starting_agent, ag.RandomAgent(), ag.OrderedAgent([8, 4, 13, 2, 10, 14, 0, 15, 11, 12, 1, 7, 9, 3, 6, 5])])
